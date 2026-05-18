@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscador de Negocios Sin Web</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #666; margin-bottom: 2rem; }
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e0; padding: 1.5rem; margin-bottom: 1.25rem; }
+  .card h2 { font-size: 11px; font-weight: 700; margin-bottom: 1rem; color: #888; text-transform: uppercase; letter-spacing: 0.07em; }
+  .api-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .api-row label { font-size: 13px; color: #555; white-space: nowrap; }
+  .search-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input, select, button { padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.15s; }
+  input:focus, select:focus { border-color: #555; }
+  input, select { background: #fff; color: #1a1a1a; }
+  button { background: #1a1a1a; color: #fff; border-color: #1a1a1a; cursor: pointer; font-weight: 500; white-space: nowrap; }
+  button:hover { background: #333; }
+  button:disabled { background: #aaa; border-color: #aaa; cursor: not-allowed; }
+  button.secondary { background: #fff; color: #1a1a1a; border-color: #ddd; }
+  button.secondary:hover { background: #f5f5f0; }
+  button.success { background: #15803d; border-color: #15803d; cursor: default; }
+  button.green { background: #15803d; border-color: #15803d; }
+  button.green:hover { background: #166534; }
+  button.copy-btn { padding: 4px 10px; font-size: 11px; background: #fff; color: #1a1a1a; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: 500; }
+  button.copy-btn:hover { background: #f5f5f0; }
+  button.copy-btn.copied { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+  .stat { background: #f9f9f7; border-radius: 10px; padding: 1rem 1.25rem; border: 1px solid #e8e8e3; }
+  .stat-label { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-val { font-size: 26px; font-weight: 600; color: #1a1a1a; }
+  .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 1rem 1.25rem; font-size: 13px; color: #b91c1c; margin-bottom: 1rem; display: none; line-height: 1.6; }
+  .success-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1rem 1.25rem; font-size: 13px; color: #15803d; margin-bottom: 1rem; display: none; font-weight: 500; }
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 1rem 1.25rem; font-size: 13px; color: #1d4ed8; margin-bottom: 1rem; }
+  .loading { text-align: center; padding: 2.5rem; color: #888; font-size: 14px; display: none; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #ddd; border-top-color: #1a1a1a; border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar-wrap { width: 280px; height: 6px; background: #eee; border-radius: 4px; margin: 12px auto 0; overflow: hidden; }
+  .progress-bar { height: 100%; background: #1a1a1a; border-radius: 4px; transition: width 0.3s; width: 0%; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+  thead th { background: #f9f9f7; padding: 10px 12px; text-align: left; font-weight: 700; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e8e8e3; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #f0f0ea; transition: background 0.1s; }
+  tbody tr:hover { background: #fafaf8; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 8px 12px; color: #1a1a1a; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .badge-no { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; background: #fef2f2; color: #b91c1c; }
+  .maps-link { color: #1d4ed8; text-decoration: none; font-size: 12px; }
+  .maps-link:hover { text-decoration: underline; }
+  .action-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 10px; }
+  .action-row span { font-size: 13px; color: #666; }
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .empty { text-align: center; padding: 3rem; color: #888; font-size: 14px; }
+  #map { width: 1px; height: 1px; position: absolute; left: -9999px; top: -9999px; }
+  .nota-input { border: none; background: transparent; font-size: 13px; color: #555; width: 100%; padding: 2px 0; outline: none; font-family: inherit; min-width: 100px; }
+  .nota-input:focus { background: #f9f9f7; border-radius: 4px; padding: 2px 6px; }
+  .nota-input::placeholder { color: #ccc; }
+  .checkbox-col { width: 36px; text-align: center; }
+  input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #15803d; }
+  .copy-col { width: 80px; text-align: center; }
+  .sheets-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 0.85rem 1.25rem; font-size: 13px; color: #166534; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔍 Buscador de Negocios Sin Web</h1>
+  <p class="subtitle">Busca prospectos y guárdalos directamente en tu Google Sheets de gestión.</p>
+
+  <div class="card">
+    <h2>Configuración</h2>
+    <div class="info-box" id="infoBox">
+      APIs necesarias: <strong>Places API · Maps JavaScript API · Geocoding API</strong> + Facturación activa
+    </div>
+    <div class="api-row">
+      <label for="apikey">Google Maps API Key</label>
+      <input type="text" id="apikey" placeholder="AIza..." style="flex:1; min-width:260px;" />
+      <button onclick="loadGoogleMaps()" id="btnLoad">Conectar</button>
+    </div>
+  </div>
+
+  <div class="card" id="searchCard" style="display:none">
+    <h2>Búsqueda</h2>
+    <div class="search-row">
+      <input type="text" id="city" placeholder="Ciudad o barrio (ej: Carabanchel, Benidorm, Gijón...)" style="flex:2;" />
+      <select id="sector" style="flex:1;">
+        <option value="reformas">Reformas</option>
+        <option value="fontanería">Fontanería</option>
+        <option value="electricista">Electricista</option>
+        <option value="carpintería">Carpintería</option>
+        <option value="pintor">Pintor</option>
+        <option value="albañil">Albañil</option>
+        <option value="clínica dental">Clínica dental</option>
+        <option value="taller mecánico">Taller mecánico</option>
+        <option value="peluquería">Peluquería</option>
+        <option value="gestoría">Gestoría</option>
+        <option value="cerrajería">Cerrajería</option>
+        <option value="cristalería">Cristalería</option>
+        <option value="tapicería">Tapicería</option>
+        <option value="mudanzas">Mudanzas</option>
+        <option value="jardinería">Jardinería</option>
+      </select>
+      <button id="btnSearch" onclick="startSearch()">🔍 Buscar</button>
+    </div>
+  </div>
+
+  <div class="error-box" id="errBox"></div>
+  <div class="success-box" id="successBox"></div>
+
+  <div class="loading" id="loadingDiv">
+    <div class="spinner"></div><br>
+    <span id="loadingMsg">Cargando…</span>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+
+  <div id="resultsSection" style="display:none">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Analizados</div><div class="stat-val" id="statTotal">0</div></div>
+      <div class="stat"><div class="stat-label">Sin web</div><div class="stat-val" id="statNoWeb">0</div></div>
+      <div class="stat"><div class="stat-label">Con teléfono</div><div class="stat-val" id="statPhone">0</div></div>
+      <div class="stat"><div class="stat-label">Valoración media</div><div class="stat-val" id="statRating">—</div></div>
+    </div>
+
+    <div class="sheets-banner">
+      <span>📋 Usa 📄 para copiar una fila al portapapeles, o selecciona varios y guarda en Sheets</span>
+      <label style="font-size:13px;cursor:pointer;font-weight:500;">
+        <input type="checkbox" id="selectAll" onchange="toggleAll(this)" style="margin-right:6px;">Seleccionar todos
+      </label>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="checkbox-col">✓</th>
+              <th>Nombre del negocio</th>
+              <th>Link Maps</th>
+              <th>Sector</th>
+              <th>Ciudad / Zona</th>
+              <th>Teléfono</th>
+              <th>Problema detectado</th>
+              <th>Notas</th>
+              <th class="copy-col">Copiar</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="emptyMsg" style="display:none">Todos los negocios encontrados tienen web. Prueba otro barrio o sector.</div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <span id="resultCount"></span>
+      <div class="btn-group">
+        <button class="green" onclick="saveToSheets()">📊 Guardar seleccionados en Sheets</button>
+        <button class="secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZ97p6oDM7Ltz2JzEYc0hDCNYV3FZcMRz2urnthc9ElJHRfB7HSCHGiH7Qr3QWbjzCQQ/exec';
+
+let noWebResults = [];
+let allResults = [];
+let collectedPlaces = [];
+let placesService = null;
+let geocoder = null;
+let currentCity = '';
+let currentSector = '';
+
+function loadGoogleMaps() {
+  const apiKey = document.getElementById('apikey').value.trim();
+  if (!apiKey) { showError('Introduce tu API Key primero.'); return; }
+  document.getElementById('errBox').style.display = 'none';
+  document.getElementById('loadingDiv').style.display = 'block';
+  document.getElementById('loadingMsg').textContent = 'Conectando con Google Maps…';
+  document.getElementById('btnLoad').disabled = true;
+
+  window.initMap = function() {
+    try {
+      const map = new google.maps.Map(document.getElementById('map'), { center: {lat:40.4,lng:-3.7}, zoom:10 });
+      placesService = new google.maps.places.PlacesService(map);
+      geocoder = new google.maps.Geocoder();
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('searchCard').style.display = 'block';
+      document.getElementById('infoBox').style.display = 'none';
+      document.getElementById('btnLoad').textContent = '✓ Conectado';
+      document.getElementById('btnLoad').className = 'success';
+    } catch(e) {
+      showError('Error: ' + e.message);
+      document.getElementById('btnLoad').disabled = false;
+    }
+  };
+
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&language=es&region=ES`;
+  script.onerror = () => {
+    showError('No se pudo cargar Google Maps. Verifica la API Key y que Maps JavaScript API está activada.');
+    document.getElementById('loadingDiv').style.display = 'none';
+    document.getElementById('btnLoad').disabled = false;
+  };
+  document.head.appendChild(script);
+}
+
+function startSearch() {
+  const city = document.getElementById('city').value.trim();
+  const sector = document.getElementById('sector').value;
+  if (!city) { showError('Introduce una ciudad o barrio.'); return; }
+  currentCity = city;
+  currentSector = sector;
+
+  document.getElementById('errBox').style.display = 'none';
+  document.getElementById('successBox').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('emptyMsg').style.display = 'none';
+  document.getElementById('loadingDiv').style.display = 'block';
+  document.getElementById('loadingMsg').textContent = 'Buscando en ' + city + '…';
+  document.getElementById('progressBar').style.width = '5%';
+  document.getElementById('btnSearch').disabled = true;
+  document.getElementById('selectAll').checked = false;
+  noWebResults = [];
+  allResults = [];
+  collectedPlaces = [];
+
+  geocoder.geocode({ address: city + ', España' }, (results, status) => {
+    if (status !== 'OK' || !results.length) {
+      showError('No se encontró "' + city + '". Prueba con el nombre completo.');
+      document.getElementById('btnSearch').disabled = false;
+      document.getElementById('loadingDiv').style.display = 'none';
+      return;
+    }
+    const location = results[0].geometry.location;
+    placesService.textSearch(
+      { query: currentSector + ' en ' + currentCity, location: location, radius: 15000, language: 'es' },
+      (results, status, pagination) => onSearchPage(results, status, pagination)
+    );
+  });
+}
+
+function onSearchPage(results, status, pagination) {
+  if (status !== google.maps.places.PlacesServiceStatus.OK || !results || !results.length) {
+    if (collectedPlaces.length === 0) {
+      showError('No se encontraron resultados para "' + currentSector + '" en ' + currentCity + '.');
+      document.getElementById('loadingDiv').style.display = 'none';
+      document.getElementById('btnSearch').disabled = false;
+    } else {
+      fetchAllDetails(collectedPlaces);
+    }
+    return;
+  }
+
+  collectedPlaces = collectedPlaces.concat(results);
+  document.getElementById('loadingMsg').textContent = 'Encontrados ' + collectedPlaces.length + ' negocios…';
+
+  if (pagination && pagination.hasNextPage && collectedPlaces.length < 60) {
+    setTimeout(function() {
+      pagination.nextPage();
+    }, 2200);
+  } else {
+    fetchAllDetails(collectedPlaces);
+  }
+}
+
+function fetchAllDetails(places) {
+  const seen = {};
+  const unique = places.filter(p => {
+    if (seen[p.place_id]) return false;
+    seen[p.place_id] = true;
+    return true;
+  });
+
+  const total = unique.length;
+  let done = 0;
+  document.getElementById('loadingMsg').textContent = 'Analizando ' + total + ' negocios…';
+  document.getElementById('progressBar').style.width = '30%';
+
+  unique.forEach(function(place) {
+    placesService.getDetails(
+      { placeId: place.place_id, fields: ['name','formatted_phone_number','formatted_address','rating','website','url'] },
+      function(detail, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
+          detail._placeId = place.place_id;
+          allResults.push(detail);
+        }
+        done++;
+        document.getElementById('progressBar').style.width = (30 + Math.round((done/total)*70)) + '%';
+        document.getElementById('loadingMsg').textContent = 'Analizando negocios (' + done + '/' + total + ')…';
+        if (done === total) {
+          noWebResults = allResults.filter(function(p) { return !p.website; });
+          renderTable(noWebResults);
+          renderStats();
+          document.getElementById('loadingDiv').style.display = 'none';
+          document.getElementById('btnSearch').disabled = false;
+          document.getElementById('resultsSection').style.display = 'block';
+        }
+      }
+    );
+  });
+}
+
+function getMapsLink(p) {
+  if (p.url) return p.url;
+  if (p._placeId) return 'https://www.google.com/maps/place/?q=place_id:' + p._placeId;
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((p.name||'') + ' ' + (p.formatted_address||''));
+}
+
+function extractZone(address) {
+  if (!address) return currentCity;
+  var parts = address.split(',');
+  if (parts.length >= 3) return (parts[parts.length - 3] || '').trim() || currentCity;
+  return currentCity;
+}
+
+function renderTable(places) {
+  if (!places.length) {
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < places.length; i++) {
+    var p = places[i];
+    var mapsUrl = getMapsLink(p);
+    var zona = extractZone(p.formatted_address);
+    html += '<tr>';
+    html += '<td class="checkbox-col"><input type="checkbox" class="row-check" data-idx="' + i + '" checked /></td>';
+    html += '<td title="' + esc(p.name) + '">' + (p.name||'—') + '</td>';
+    html += '<td><a class="maps-link" href="' + mapsUrl + '" target="_blank">📍 Maps</a></td>';
+    html += '<td>' + currentSector + '</td>';
+    html += '<td title="' + esc(p.formatted_address) + '">' + zona + '</td>';
+    html += '<td>' + (p.formatted_phone_number || '<span style="color:#aaa">—</span>') + '</td>';
+    html += '<td><span class="badge-no">No tiene web</span></td>';
+    html += '<td><input class="nota-input" type="text" placeholder="Nota…" data-idx="' + i + '" /></td>';
+    html += '<td class="copy-col"><button class="copy-btn" data-idx="' + i + '" onclick="copyRow(' + i + ')">📄 Copiar</button></td>';
+    html += '</tr>';
+  }
+  document.getElementById('tbody').innerHTML = html;
+  document.getElementById('resultCount').textContent = places.length + ' negocio' + (places.length!==1?'s':'') + ' sin web encontrado' + (places.length!==1?'s':'');
+}
+
+function copyRow(i) {
+  var p = noWebResults[i];
+  if (!p) return;
+  var nota = (document.querySelector('.nota-input[data-idx="' + i + '"]') || {}).value || '';
+  var cols = [
+    p.name || '',
+    getMapsLink(p),
+    'No llamado',
+    currentSector,
+    extractZone(p.formatted_address),
+    p.formatted_phone_number || '',
+    'No tiene web',
+    '',
+    '',
+    nota
+  ];
+  var text = cols.join('\t');
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.querySelector('.copy-btn[data-idx="' + i + '"]');
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function toggleAll(cb) {
+  var checks = document.querySelectorAll('.row-check');
+  for (var i = 0; i < checks.length; i++) checks[i].checked = cb.checked;
+}
+
+function esc(s) { return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function renderStats() {
+  document.getElementById('statTotal').textContent = allResults.length;
+  document.getElementById('statNoWeb').textContent = noWebResults.length;
+  document.getElementById('statPhone').textContent = noWebResults.filter(function(p){return p.formatted_phone_number;}).length;
+  var ratings = allResults.filter(function(p){return p.rating;}).map(function(p){return p.rating;});
+  document.getElementById('statRating').textContent = ratings.length ? (ratings.reduce(function(a,b){return a+b;},0)/ratings.length).toFixed(1) : '—';
+}
+
+function showError(msg) {
+  document.getElementById('errBox').textContent = msg;
+  document.getElementById('errBox').style.display = 'block';
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('btnSearch').disabled = false;
+}
+
+async function saveToSheets() {
+  var selected = [];
+  var checks = document.querySelectorAll('.row-check:checked');
+  for (var c = 0; c < checks.length; c++) {
+    var i = parseInt(checks[c].dataset.idx);
+    var p = noWebResults[i];
+    if (!p) continue;
+    var nota = (document.querySelector('.nota-input[data-idx="' + i + '"]') || {}).value || '';
+    selected.push({
+      nombre: p.name || '',
+      linkMaps: getMapsLink(p),
+      sector: currentSector,
+      ciudad: extractZone(p.formatted_address),
+      telefono: p.formatted_phone_number || '',
+      problema: 'No tiene web',
+      notas: nota
+    });
+  }
+
+  if (!selected.length) { showError('Selecciona al menos un negocio.'); return; }
+  document.getElementById('errBox').style.display = 'none';
+  document.getElementById('successBox').style.display = 'none';
+
+  var btn = document.querySelector('[onclick="saveToSheets()"]');
+  var orig = btn.textContent;
+  btn.textContent = '⏳ Guardando…';
+  btn.disabled = true;
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: selected })
+    });
+    document.getElementById('successBox').textContent = '✅ ' + selected.length + ' negocio' + (selected.length!==1?'s':'') + ' guardado' + (selected.length!==1?'s':'') + ' en tu Google Sheets.';
+    document.getElementById('successBox').style.display = 'block';
+    var allChecks = document.querySelectorAll('.row-check:checked');
+    for (var j = 0; j < allChecks.length; j++) allChecks[j].checked = false;
+    document.getElementById('selectAll').checked = false;
+  } catch(e) {
+    showError('Error al guardar: ' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+function exportCSV() {
+  if (!noWebResults.length) return;
+  var headers = ['NOMBRE DEL NEGOCIO','LINK MAPS','ESTADO','SECTOR','CIUDAD-ZONA','TELÉFONO','PROBLEMA DETECTADO','FECHA LLAMADA','FECHA AGENDADA','NOTAS'];
+  var rows = [];
+  for (var i = 0; i < noWebResults.length; i++) {
+    var p = noWebResults[i];
+    var nota = (document.querySelector('.nota-input[data-idx="' + i + '"]') || {}).value || '';
+    rows.push([
+      '"' + (p.name||'').replace(/"/g,'""') + '"',
+      '"' + getMapsLink(p) + '"',
+      '"No llamado"',
+      '"' + currentSector + '"',
+      '"' + extractZone(p.formatted_address) + '"',
+      '"' + (p.formatted_phone_number||'').replace(/"/g,'""') + '"',
+      '"No tiene web"',
+      '""','""',
+      '"' + nota.replace(/"/g,'""') + '"'
+    ].join(','));
+  }
+  var csv = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prospectos_' + currentSector + '_' + currentCity + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
